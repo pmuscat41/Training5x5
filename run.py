@@ -1,8 +1,8 @@
-
 import streamlit as st
 import pandas as pd
 from datetime import datetime
 import time
+import pygame
 
 st.set_page_config(layout="wide")
 
@@ -37,12 +37,22 @@ def highlight_completed_sets(completed):
     else:
         return ''
 
+# Helper function to find the next uncompleted set
+def find_next_uncompleted_set(completed):
+    for i in range(len(completed)):
+        if not completed[i]:
+            return i
+    return None
+
 # Main app
 def main():
     st.title('Gym Workout Tracker')
 
     # Load workout data
     workout_data = load_data()
+
+    # Initialize pygame mixer
+    pygame.mixer.init()
 
     # Sidebar
     st.sidebar.title('Timer')
@@ -52,14 +62,30 @@ def main():
     if st.sidebar.button('Start Timer'):
         timer_seconds = int(timer_duration.split(' ')[0]) if 'seconds' in timer_duration else int(timer_duration.split(' ')[0]) * 60
         timer_placeholder = st.sidebar.empty()
+
+        # Find the next uncompleted set and update the completed list
+        current_exercise = st.session_state.get('current_exercise')
+        if current_exercise:
+            completed = st.session_state.get(f"{current_exercise}_completed", [False] * 5)
+            next_uncompleted_set = find_next_uncompleted_set(completed)
+            if next_uncompleted_set is not None:
+                completed[next_uncompleted_set] = True
+                st.session_state[f"{current_exercise}_completed"] = completed
+                st.experimental_rerun()
+
         while timer_seconds > 0:
             minutes, seconds = divmod(timer_seconds, 60)
             timer_text = f"{minutes:02d}:{seconds:02d}"
             timer_placeholder.header(timer_text)
             time.sleep(1)
             timer_seconds -= 1
+
         timer_placeholder.header("Time's up!")
         st.sidebar.success("Workout complete!")
+
+        # Play sound when the timer ends
+        sound = pygame.mixer.Sound("/workspaces/Training5x5/timer_end.mp3")
+        sound.play()
 
     # Reporting
     st.sidebar.header('Workout Report')
@@ -85,15 +111,16 @@ def main():
         st.header('Push Day')
         exercises = ['Dumbbell Squats', 'Incline Dumbbell Press', 'Dumbbell Shoulder Press', 'Shoulder Supersets']
         for exercise in exercises:
+            st.session_state['current_exercise'] = exercise
             st.subheader(exercise)
             last_weight, last_reps = get_last_weight_and_reps(workout_data, exercise)
             col1, col2, col3, col4, col5, col6 = st.columns(6)
             weights = []
             reps = []
-            completed = [False] * 5
+            completed = st.session_state.get(f"{exercise}_completed", [False] * 5)
             for i, col in enumerate([col1, col2, col3, col4, col5]):
                 with col:
-                    completed[i] = st.checkbox('', key=f'{exercise}_completed_set{i+1}')
+                    completed[i] = st.checkbox('', key=f'{exercise}_completed_set{i+1}', value=completed[i])
                     set_style = highlight_completed_sets(completed[i])
                     st.markdown(f'<div style="{set_style}">Set {i+1}</div>', unsafe_allow_html=True)
                     weight = st.number_input(f'Weight (kg)', min_value=0, value=last_weight, step=1, key=f'{exercise}_weight_set{i+1}')
@@ -121,15 +148,16 @@ def main():
         st.header('Pull Day')
         exercises = ['Deadlifts', 'Bent Over Rows', 'Bicep Curls']
         for exercise in exercises:
+            st.session_state['current_exercise'] = exercise
             st.subheader(exercise)
             last_weight, last_reps = get_last_weight_and_reps(workout_data, exercise)
             col1, col2, col3, col4, col5, col6 = st.columns(6)
             weights = []
             reps = []
-            completed = [False] * 5
+            completed = st.session_state.get(f"{exercise}_completed", [False] * 5)
             for i, col in enumerate([col1, col2, col3, col4, col5]):
                 with col:
-                    completed[i] = st.checkbox('', key=f'{exercise}_completed_set{i+1}')
+                    completed[i] = st.checkbox('', key=f'{exercise}_completed_set{i+1}', value=completed[i])
                     set_style = highlight_completed_sets(completed[i])
                     st.markdown(f'<div style="{set_style}">Set {i+1}</div>', unsafe_allow_html=True)
                     weight = st.number_input(f'Weight (kg)', min_value=0, value=last_weight, step=1, key=f'{exercise}_weight_set{i+1}')
@@ -157,10 +185,10 @@ def main():
         st.header('Skipping')
         col1, col2, col3, col4, col5, col6 = st.columns(6)
         reps = []
-        completed = [False] * 5
+        completed = st.session_state.get("skipping_completed", [False] * 5)
         for i, col in enumerate([col1, col2, col3, col4, col5]):
             with col:
-                completed[i] = st.checkbox('', key=f'skipping_completed_set{i+1}')
+                completed[i] = st.checkbox('', key=f'skipping_completed_set{i+1}', value=completed[i])
                 set_style = highlight_completed_sets(completed[i])
                 st.markdown(f'<div style="{set_style}">Set {i+1}</div>', unsafe_allow_html=True)
                 rep = st.number_input(f'Skipping Reps', min_value=0, step=10, key=f'skipping_reps_set{i+1}')
@@ -187,10 +215,10 @@ def main():
         col1, col2, col3, col4, col5, col6 = st.columns(6)
         times = []
         distances = []
-        completed = [False] * 5
+        completed = st.session_state.get("treadmill_completed", [False] * 5)
         for i, col in enumerate([col1, col2, col3, col4, col5]):
             with col:
-                completed[i] = st.checkbox('', key=f'treadmill_completed_set{i+1}')
+                completed[i] = st.checkbox('', key=f'treadmill_completed_set{i+1}', value=completed[i])
                 set_style = highlight_completed_sets(completed[i])
                 st.markdown(f'<div style="{set_style}">Set {i+1}</div>', unsafe_allow_html=True)
                 time_mins = st.number_input(f'Treadmill Time (minutes)', min_value=0, step=1, key=f'treadmill_time_set{i+1}')
@@ -218,10 +246,10 @@ def main():
         st.header('Spinning')
         col1, col2, col3, col4, col5, col6 = st.columns(6)
         times = []
-        completed = [False] * 5
+        completed = st.session_state.get("spinning_completed", [False] * 5)
         for i, col in enumerate([col1, col2, col3, col4, col5]):
             with col:
-                completed[i] = st.checkbox('', key=f'spinning_completed_set{i+1}')
+                completed[i] = st.checkbox('', key=f'spinning_completed_set{i+1}', value=completed[i])
                 set_style = highlight_completed_sets(completed[i])
                 st.markdown(f'<div style="{set_style}">Set {i+1}</div>', unsafe_allow_html=True)
                 time_mins = st.number_input(f'Spinning Time (minutes)', min_value=0, step=1, key=f'spinning_time_set{i+1}')
