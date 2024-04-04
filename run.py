@@ -17,10 +17,16 @@ def load_data():
         data = pd.DataFrame(columns=['Date', 'Exercise', 'Set', 'Weight', 'Reps', 'Time', 'Distance'])
     return data
 
-# Helper function to get the last recorded weight for an exercise
-def get_last_weight(data, exercise):
-    last_weight = data[data['Exercise'] == exercise]['Weight'].iloc[-1] if not data[data['Exercise'] == exercise].empty else 0
-    return int(last_weight)
+# Helper function to get the last recorded weight and reps for an exercise
+def get_last_weight_and_reps(data, exercise):
+    if not data[data['Exercise'] == exercise].empty:
+        last_entry = data[data['Exercise'] == exercise].iloc[-1]
+        last_weight = last_entry['Weight']
+        last_reps = last_entry['Reps']
+    else:
+        last_weight = 0
+        last_reps = 0
+    return int(last_weight), int(last_reps)
 
 # Main app
 def main():
@@ -71,7 +77,7 @@ def main():
         exercises = ['Dumbbell Squats', 'Incline Dumbbell Press', 'Dumbbell Shoulder Press', 'Shoulder Supersets']
         for exercise in exercises:
             st.subheader(exercise)
-            last_weight = get_last_weight(workout_data, exercise)
+            last_weight, last_reps = get_last_weight_and_reps(workout_data, exercise)
             col1, col2, col3, col4, col5 = st.columns(5)
             weights = []
             reps = []
@@ -79,17 +85,17 @@ def main():
                 with col:
                     st.write(f'Set {i+1}')
                     weight = st.number_input(f'Weight (kg)', min_value=0, value=last_weight, step=1, key=f'{exercise}_weight_set{i+1}')
-                    rep = st.number_input(f'Reps', min_value=0, step=1, key=f'{exercise}_reps_set{i+1}')
+                    rep = st.number_input(f'Reps', min_value=0, value=last_reps, step=1, key=f'{exercise}_reps_set{i+1}')
                     weights.append(weight)
                     reps.append(rep)
             if st.button(f'Save {exercise}'):
                 new_data = pd.DataFrame({'Date': [datetime.now().strftime("%Y-%m-%d")] * 5,
-                                         'Exercise': [exercise] * 5,
-                                         'Set': list(range(1, 6)),
-                                         'Weight': weights,
-                                         'Reps': reps,
-                                         'Time': [''] * 5,
-                                         'Distance': [''] * 5})
+                                        'Exercise': [exercise] * 5,
+                                        'Set': list(range(1, 6)),
+                                        'Weight': weights,
+                                        'Reps': reps,
+                                        'Time': [''] * 5,
+                                        'Distance': [''] * 5})
                 workout_data = pd.concat([workout_data, new_data], ignore_index=True)
                 save_data(workout_data)
                 st.success(f'{exercise} data saved!')
@@ -99,7 +105,7 @@ def main():
         exercises = ['Deadlifts', 'Bent Over Rows', 'Bicep Curls']
         for exercise in exercises:
             st.subheader(exercise)
-            last_weight = get_last_weight(workout_data, exercise)
+            last_weight, last_reps = get_last_weight_and_reps(workout_data, exercise)
             col1, col2, col3, col4, col5 = st.columns(5)
             weights = []
             reps = []
@@ -107,21 +113,20 @@ def main():
                 with col:
                     st.write(f'Set {i+1}')
                     weight = st.number_input(f'Weight (kg)', min_value=0, value=last_weight, step=1, key=f'{exercise}_weight_set{i+1}')
-                    rep = st.number_input(f'Reps', min_value=0, step=1, key=f'{exercise}_reps_set{i+1}')
+                    rep = st.number_input(f'Reps', min_value=0, value=last_reps, step=1, key=f'{exercise}_reps_set{i+1}')
                     weights.append(weight)
                     reps.append(rep)
             if st.button(f'Save {exercise}'):
                 new_data = pd.DataFrame({'Date': [datetime.now().strftime("%Y-%m-%d")] * 5,
-                                         'Exercise': [exercise] * 5,
-                                         'Set': list(range(1, 6)),
-                                         'Weight': weights,
-                                         'Reps': reps,
-                                         'Time': [''] * 5,
-                                         'Distance': [''] * 5})
+                                        'Exercise': [exercise] * 5,
+                                        'Set': list(range(1, 6)),
+                                        'Weight': weights,
+                                        'Reps': reps,
+                                        'Time': [''] * 5,
+                                        'Distance': [''] * 5})
                 workout_data = pd.concat([workout_data, new_data], ignore_index=True)
                 save_data(workout_data)
                 st.success(f'{exercise} data saved!')
-
     with tab_skipping:
         st.header('Skipping')
         col1, col2, col3, col4, col5 = st.columns(5)
