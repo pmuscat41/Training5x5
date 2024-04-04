@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -84,8 +83,14 @@ def main():
                     weights.append(weight)
                     reps.append(rep)
             if st.button(f'Save {exercise}'):
-                for i in range(5):
-                    workout_data = workout_data.append({'Date': datetime.now().strftime("%Y-%m-%d"), 'Exercise': exercise, 'Set': i+1, 'Weight': weights[i], 'Reps': reps[i], 'Time': '', 'Distance': ''}, ignore_index=True)
+                new_data = pd.DataFrame({'Date': [datetime.now().strftime("%Y-%m-%d")] * 5,
+                                         'Exercise': [exercise] * 5,
+                                         'Set': list(range(1, 6)),
+                                         'Weight': weights,
+                                         'Reps': reps,
+                                         'Time': [''] * 5,
+                                         'Distance': [''] * 5})
+                workout_data = pd.concat([workout_data, new_data], ignore_index=True)
                 save_data(workout_data)
                 st.success(f'{exercise} data saved!')
 
@@ -106,8 +111,14 @@ def main():
                     weights.append(weight)
                     reps.append(rep)
             if st.button(f'Save {exercise}'):
-                for i in range(5):
-                    workout_data = workout_data.append({'Date': datetime.now().strftime("%Y-%m-%d"), 'Exercise': exercise, 'Set': i+1, 'Weight': weights[i], 'Reps': reps[i], 'Time': '', 'Distance': ''}, ignore_index=True)
+                new_data = pd.DataFrame({'Date': [datetime.now().strftime("%Y-%m-%d")] * 5,
+                                         'Exercise': [exercise] * 5,
+                                         'Set': list(range(1, 6)),
+                                         'Weight': weights,
+                                         'Reps': reps,
+                                         'Time': [''] * 5,
+                                         'Distance': [''] * 5})
+                workout_data = pd.concat([workout_data, new_data], ignore_index=True)
                 save_data(workout_data)
                 st.success(f'{exercise} data saved!')
 
@@ -121,8 +132,14 @@ def main():
                 rep = st.number_input(f'Skipping Reps', min_value=0, step=10, key=f'skipping_reps_set{i+1}')
                 reps.append(rep)
         if st.button('Save Skipping'):
-            for i in range(5):
-                workout_data = workout_data.append({'Date': datetime.now().strftime("%Y-%m-%d"), 'Exercise': 'Skipping', 'Set': i+1, 'Weight': '', 'Reps': reps[i], 'Time': '', 'Distance': ''}, ignore_index=True)
+            new_data = pd.DataFrame({'Date': [datetime.now().strftime("%Y-%m-%d")] * 5,
+                                     'Exercise': ['Skipping'] * 5,
+                                     'Set': list(range(1, 6)),
+                                     'Weight': [''] * 5,
+                                     'Reps': reps,
+                                     'Time': [''] * 5,
+                                     'Distance': [''] * 5})
+            workout_data = pd.concat([workout_data, new_data], ignore_index=True)
             save_data(workout_data)
             st.success('Skipping data saved!')
 
@@ -139,8 +156,14 @@ def main():
                 times.append(time_mins)
                 distances.append(distance_km)
         if st.button('Save Treadmill'):
-            for i in range(5):
-                workout_data = workout_data.append({'Date': datetime.now().strftime("%Y-%m-%d"), 'Exercise': 'Treadmill', 'Set': i+1, 'Weight': '', 'Reps': '', 'Time': times[i], 'Distance': distances[i]}, ignore_index=True)
+            new_data = pd.DataFrame({'Date': [datetime.now().strftime("%Y-%m-%d")] * 5,
+                                     'Exercise': ['Treadmill'] * 5,
+                                     'Set': list(range(1, 6)),
+                                     'Weight': [''] * 5,
+                                     'Reps': [''] * 5,
+                                     'Time': times,
+                                     'Distance': distances})
+            workout_data = pd.concat([workout_data, new_data], ignore_index=True)
             save_data(workout_data)
             st.success('Treadmill data saved!')
 
@@ -154,8 +177,14 @@ def main():
                 time_mins = st.number_input(f'Spinning Time (minutes)', min_value=0, step=1, key=f'spinning_time_set{i+1}')
                 times.append(time_mins)
         if st.button('Save Spinning'):
-            for i in range(5):
-                workout_data = workout_data.append({'Date': datetime.now().strftime("%Y-%m-%d"), 'Exercise': 'Spinning', 'Set': i+1, 'Weight': '', 'Reps': '', 'Time': times[i], 'Distance': ''}, ignore_index=True)
+            new_data = pd.DataFrame({'Date': [datetime.now().strftime("%Y-%m-%d")] * 5,
+                                     'Exercise': ['Spinning'] * 5,
+                                     'Set': list(range(1, 6)),
+                                     'Weight': [''] * 5,
+                                     'Reps': [''] * 5,
+                                     'Time': times,
+                                     'Distance': [''] * 5})
+            workout_data = pd.concat([workout_data, new_data], ignore_index=True)
             save_data(workout_data)
             st.success('Spinning data saved!')
 
