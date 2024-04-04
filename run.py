@@ -1,95 +1,163 @@
+
 import streamlit as st
-import docx2txt
-import io
-import re
-from redlines import Redlines
-from itertools import zip_longest
-import base64
+import pandas as pd
+from datetime import datetime
+import time
 
 st.set_page_config(layout="wide")
 
+# Helper function to save workout data to CSV
+def save_data(data):
+    data.to_csv('workout_data.csv', index=False)
 
-def get_data():
-    if 'all_markdown' not in st.session_state:
-        st.session_state['all_markdown'] = []
-    return st.session_state['all_markdown']
+# Helper function to load workout data from CSV
+def load_data():
+    try:
+        data = pd.read_csv('workout_data.csv')
+    except FileNotFoundError:
+        data = pd.DataFrame(columns=['Date', 'Exercise', 'Set', 'Weight', 'Reps', 'Time', 'Distance'])
+    return data
 
-def read_word_or_text_file(file):
-    if file.type == "text/plain":
-        # Read text file
+# Helper function to get the last recorded weight for an exercise
+def get_last_weight(data, exercise):
+    last_weight = data[data['Exercise'] == exercise]['Weight'].iloc[-1] if not data[data['Exercise'] == exercise].empty else 0
+    return int(last_weight)
 
-        content = str(file.read(), "utf-8")
-    else:
-        # Read Word file
-        content = docx2txt.process(io.BytesIO(file.read()))
-    return content
-
-def split_claims(content):
-    claims = re.split(r"\.(?=\s*\d)", content)
-    return [claim.strip() for claim in claims if claim.strip()]
-
-def display_claims(claims1, claims2,mtype):
-    all_markdown = []
-    col1, col2, col3 = st.columns(3)  # Define columns
-    for i, (claim1, claim2) in enumerate(zip_longest(claims1, claims2)):
-        with col1:
-            if claim1 is not None:
-                st.text_area(f"Claim {i+1}", claim1, key=f"claim_{i+1}")
-        with col2:
-            if claim2 is not None:
-                st.text_area(f"Claim {i+1}", claim2, key=f"claim_b{i+1}")
-        with col3:
-            if claim1 is not None and claim2 is not None:
-                diff = Redlines(claim1, claim2, markdown_style=mtype)
-                opt = diff.output_markdown
-                st.markdown(opt+".\n", unsafe_allow_html=True)
-                all_markdown.append(opt)
-                all_markdown.append(".\n")
-            if claim1 is not None and claim2 is  None:
-                diff = Redlines(claim1, " ",markdown_style=mtype)
-                opt = diff.output_markdown
-                st.markdown(opt+".\n", unsafe_allow_html=True)
-                all_markdown.append(opt)
-                all_markdown.append(".\n")
-            if claim1 is  None and claim2 is not None:
-               diff=Redlines(" ", claim2, markdown_style=mtype)
-               opt = diff.output_markdown
-               st.markdown(opt+".\n", unsafe_allow_html=True)
-               all_markdown.append(opt)
-               all_markdown.append(".\n")
-    return '\n'.join(all_markdown)
-        
-
+# Main app
 def main():
-    st.sidebar.title("Claim Operations")
-    file1 = st.sidebar.file_uploader("Upload First File", type=['docx', 'txt'])
-    file2 = st.sidebar.file_uploader("Upload Second File", type=['docx', 'txt'])
+    st.title('Gym Workout Tracker')
 
-    operation = st.sidebar.radio("Select Operation", ["Mark-up Claim Changes", "Print Markup"])
-    
-    mtype = st.sidebar.selectbox("Select markup type", ["red-green", "none", "red","ghfm"])
+    # Load workout data
+    workout_data = load_data()
 
+    # Sidebar
+    st.sidebar.title('Timer')
+    timer_duration = st.sidebar.selectbox('Timer Duration', ['30 seconds', '1 minute', '1.5 minutes', '2 minutes'])
 
-    if operation == "Mark-up Claim Changes" and file1 is not None and file2 is not None:
-        content = read_word_or_text_file(file1)
-        current_claims = split_claims(content)
-        content_2 = read_word_or_text_file(file2)
-        new_claims_2 = split_claims(content_2)
-    
-        # Call display_claims and store the result in session state
-        st.session_state['all_markdown'] = display_claims(current_claims, new_claims_2,mtype)
+    # Timer
+    if st.sidebar.button('Start Timer'):
+        timer_seconds = int(timer_duration.split(' ')[0]) if 'seconds' in timer_duration else int(timer_duration.split(' ')[0]) * 60
+        timer_placeholder = st.sidebar.empty()
+        while timer_seconds > 0:
+            minutes, seconds = divmod(timer_seconds, 60)
+            timer_text = f"{minutes:02d}:{seconds:02d}"
+            timer_placeholder.header(timer_text)
+            time.sleep(1)
+            timer_seconds -= 1
+        timer_placeholder.header("Time's up!")
+        st.sidebar.success("Workout complete!")
 
-    if st.sidebar.button('Clear Screen'):
-        st.session_state['all_markdown'] = []
-        st.experimental_rerun()
-    if st.sidebar.button('Download'):
-        markdown_content = '\n'.join(st.session_state['all_markdown'])
-        b64 = base64.b64encode(markdown_content.encode()).decode()
-        href = f'<a href="data:text/plain;base64,{b64}" download="output2.md">Download Markdown</a>'
-        st.sidebar.markdown(href, unsafe_allow_html=True)
+    # Reporting
+    st.sidebar.header('Workout Report')
+    if not workout_data.empty:
+        min_date = pd.to_datetime(workout_data['Date']).min().date()
+        max_date = pd.to_datetime(workout_data['Date']).max().date()
+        date_range = st.sidebar.date_input('Select Date Range', [min_date, max_date], min_value=min_date, max_value=max_date)
+        filtered_data = workout_data[(workout_data['Date'] >= date_range[0].strftime('%Y-%m-%d')) & (workout_data['Date'] <= date_range[1].strftime('%Y-%m-%d'))]
+        if not filtered_data.empty:
+            st.sidebar.dataframe(filtered_data)
+            if st.sidebar.button('Export to CSV'):
+                filtered_data.to_csv('workout_report.csv', index=False)
+                st.sidebar.success('Workout report exported to CSV!')
+        else:
+            st.sidebar.info('No workout data available for the selected date range.')
+    else:
+        st.sidebar.info('No workout data available.')
 
-    if operation == "Print Markup":
-        st.markdown(st.session_state['all_markdown'], unsafe_allow_html=True)
-        
-if __name__ == "__main__":
+    # Tabs for different exercises
+    tab_push, tab_pull, tab_skipping, tab_treadmill, tab_spinning = st.tabs(['Push Day', 'Pull Day', 'Skipping', 'Treadmill', 'Spinning'])
+
+    with tab_push:
+        st.header('Push Day')
+        exercises = ['Dumbbell Squats', 'Incline Dumbbell Press', 'Dumbbell Shoulder Press', 'Shoulder Supersets']
+        for exercise in exercises:
+            st.subheader(exercise)
+            last_weight = get_last_weight(workout_data, exercise)
+            col1, col2, col3, col4, col5 = st.columns(5)
+            weights = []
+            reps = []
+            for i, col in enumerate([col1, col2, col3, col4, col5]):
+                with col:
+                    st.write(f'Set {i+1}')
+                    weight = st.number_input(f'Weight (kg)', min_value=0, value=last_weight, step=1, key=f'{exercise}_weight_set{i+1}')
+                    rep = st.number_input(f'Reps', min_value=0, step=1, key=f'{exercise}_reps_set{i+1}')
+                    weights.append(weight)
+                    reps.append(rep)
+            if st.button(f'Save {exercise}'):
+                for i in range(5):
+                    workout_data = workout_data.append({'Date': datetime.now().strftime("%Y-%m-%d"), 'Exercise': exercise, 'Set': i+1, 'Weight': weights[i], 'Reps': reps[i], 'Time': '', 'Distance': ''}, ignore_index=True)
+                save_data(workout_data)
+                st.success(f'{exercise} data saved!')
+
+    with tab_pull:
+        st.header('Pull Day')
+        exercises = ['Deadlifts', 'Bent Over Rows', 'Bicep Curls']
+        for exercise in exercises:
+            st.subheader(exercise)
+            last_weight = get_last_weight(workout_data, exercise)
+            col1, col2, col3, col4, col5 = st.columns(5)
+            weights = []
+            reps = []
+            for i, col in enumerate([col1, col2, col3, col4, col5]):
+                with col:
+                    st.write(f'Set {i+1}')
+                    weight = st.number_input(f'Weight (kg)', min_value=0, value=last_weight, step=1, key=f'{exercise}_weight_set{i+1}')
+                    rep = st.number_input(f'Reps', min_value=0, step=1, key=f'{exercise}_reps_set{i+1}')
+                    weights.append(weight)
+                    reps.append(rep)
+            if st.button(f'Save {exercise}'):
+                for i in range(5):
+                    workout_data = workout_data.append({'Date': datetime.now().strftime("%Y-%m-%d"), 'Exercise': exercise, 'Set': i+1, 'Weight': weights[i], 'Reps': reps[i], 'Time': '', 'Distance': ''}, ignore_index=True)
+                save_data(workout_data)
+                st.success(f'{exercise} data saved!')
+
+    with tab_skipping:
+        st.header('Skipping')
+        col1, col2, col3, col4, col5 = st.columns(5)
+        reps = []
+        for i, col in enumerate([col1, col2, col3, col4, col5]):
+            with col:
+                st.write(f'Set {i+1}')
+                rep = st.number_input(f'Skipping Reps', min_value=0, step=10, key=f'skipping_reps_set{i+1}')
+                reps.append(rep)
+        if st.button('Save Skipping'):
+            for i in range(5):
+                workout_data = workout_data.append({'Date': datetime.now().strftime("%Y-%m-%d"), 'Exercise': 'Skipping', 'Set': i+1, 'Weight': '', 'Reps': reps[i], 'Time': '', 'Distance': ''}, ignore_index=True)
+            save_data(workout_data)
+            st.success('Skipping data saved!')
+
+    with tab_treadmill:
+        st.header('Treadmill')
+        col1, col2, col3, col4, col5 = st.columns(5)
+        times = []
+        distances = []
+        for i, col in enumerate([col1, col2, col3, col4, col5]):
+            with col:
+                st.write(f'Set {i+1}')
+                time_mins = st.number_input(f'Treadmill Time (minutes)', min_value=0, step=1, key=f'treadmill_time_set{i+1}')
+                distance_km = st.number_input(f'Treadmill Distance (km)', min_value=0.0, step=0.1, key=f'treadmill_distance_set{i+1}')
+                times.append(time_mins)
+                distances.append(distance_km)
+        if st.button('Save Treadmill'):
+            for i in range(5):
+                workout_data = workout_data.append({'Date': datetime.now().strftime("%Y-%m-%d"), 'Exercise': 'Treadmill', 'Set': i+1, 'Weight': '', 'Reps': '', 'Time': times[i], 'Distance': distances[i]}, ignore_index=True)
+            save_data(workout_data)
+            st.success('Treadmill data saved!')
+
+    with tab_spinning:
+        st.header('Spinning')
+        col1, col2, col3, col4, col5 = st.columns(5)
+        times = []
+        for i, col in enumerate([col1, col2, col3, col4, col5]):
+            with col:
+                st.write(f'Set {i+1}')
+                time_mins = st.number_input(f'Spinning Time (minutes)', min_value=0, step=1, key=f'spinning_time_set{i+1}')
+                times.append(time_mins)
+        if st.button('Save Spinning'):
+            for i in range(5):
+                workout_data = workout_data.append({'Date': datetime.now().strftime("%Y-%m-%d"), 'Exercise': 'Spinning', 'Set': i+1, 'Weight': '', 'Reps': '', 'Time': times[i], 'Distance': ''}, ignore_index=True)
+            save_data(workout_data)
+            st.success('Spinning data saved!')
+
+if __name__ == '__main__':
     main()
