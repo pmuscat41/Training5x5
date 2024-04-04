@@ -14,7 +14,8 @@ def load_data():
     try:
         data = pd.read_csv('workout_data.csv')
     except FileNotFoundError:
-        data = pd.DataFrame(columns=['Date', 'Exercise', 'Set', 'Weight', 'Reps', 'Time', 'Distance'])
+        data = pd.DataFrame(columns=['Date', 'Exercise', 'Set', 'Weight', 'Reps', 'Time', 'Distance', 'Completed'])
+        data['Completed'] = False
     return data
 
 # Helper function to get the last recorded weight and reps for an exercise
@@ -27,6 +28,13 @@ def get_last_weight_and_reps(data, exercise):
         last_weight = 0
         last_reps = 0
     return int(last_weight), int(last_reps)
+
+# Helper function to highlight completed sets
+def highlight_completed_sets(completed):
+    if completed:
+        return 'background-color: #4CAF50; color: white;'
+    else:
+        return ''
 
 # Main app
 def main():
@@ -78,24 +86,32 @@ def main():
         for exercise in exercises:
             st.subheader(exercise)
             last_weight, last_reps = get_last_weight_and_reps(workout_data, exercise)
-            col1, col2, col3, col4, col5 = st.columns(5)
+            col1, col2, col3, col4, col5, col6 = st.columns(6)
             weights = []
             reps = []
+            completed = [False] * 5
             for i, col in enumerate([col1, col2, col3, col4, col5]):
                 with col:
-                    st.write(f'Set {i+1}')
+                    completed[i] = st.checkbox('', key=f'{exercise}_completed_set{i+1}')
+                    set_style = highlight_completed_sets(completed[i])
+                    st.markdown(f'<div style="{set_style}">Set {i+1}</div>', unsafe_allow_html=True)
                     weight = st.number_input(f'Weight (kg)', min_value=0, value=last_weight, step=1, key=f'{exercise}_weight_set{i+1}')
                     rep = st.number_input(f'Reps', min_value=0, value=last_reps, step=1, key=f'{exercise}_reps_set{i+1}')
                     weights.append(weight)
                     reps.append(rep)
+
+            with col6:
+                st.write('Completed')
+
             if st.button(f'Save {exercise}'):
                 new_data = pd.DataFrame({'Date': [datetime.now().strftime("%Y-%m-%d")] * 5,
-                                        'Exercise': [exercise] * 5,
-                                        'Set': list(range(1, 6)),
-                                        'Weight': weights,
-                                        'Reps': reps,
-                                        'Time': [''] * 5,
-                                        'Distance': [''] * 5})
+                                         'Exercise': [exercise] * 5,
+                                         'Set': list(range(1, 6)),
+                                         'Weight': weights,
+                                         'Reps': reps,
+                                         'Time': [''] * 5,
+                                         'Distance': [''] * 5,
+                                         'Completed': completed})
                 workout_data = pd.concat([workout_data, new_data], ignore_index=True)
                 save_data(workout_data)
                 st.success(f'{exercise} data saved!')
@@ -106,36 +122,52 @@ def main():
         for exercise in exercises:
             st.subheader(exercise)
             last_weight, last_reps = get_last_weight_and_reps(workout_data, exercise)
-            col1, col2, col3, col4, col5 = st.columns(5)
+            col1, col2, col3, col4, col5, col6 = st.columns(6)
             weights = []
             reps = []
+            completed = [False] * 5
             for i, col in enumerate([col1, col2, col3, col4, col5]):
                 with col:
-                    st.write(f'Set {i+1}')
+                    completed[i] = st.checkbox('', key=f'{exercise}_completed_set{i+1}')
+                    set_style = highlight_completed_sets(completed[i])
+                    st.markdown(f'<div style="{set_style}">Set {i+1}</div>', unsafe_allow_html=True)
                     weight = st.number_input(f'Weight (kg)', min_value=0, value=last_weight, step=1, key=f'{exercise}_weight_set{i+1}')
                     rep = st.number_input(f'Reps', min_value=0, value=last_reps, step=1, key=f'{exercise}_reps_set{i+1}')
                     weights.append(weight)
                     reps.append(rep)
+
+            with col6:
+                st.write('Completed')
+
             if st.button(f'Save {exercise}'):
                 new_data = pd.DataFrame({'Date': [datetime.now().strftime("%Y-%m-%d")] * 5,
-                                        'Exercise': [exercise] * 5,
-                                        'Set': list(range(1, 6)),
-                                        'Weight': weights,
-                                        'Reps': reps,
-                                        'Time': [''] * 5,
-                                        'Distance': [''] * 5})
+                                         'Exercise': [exercise] * 5,
+                                         'Set': list(range(1, 6)),
+                                         'Weight': weights,
+                                         'Reps': reps,
+                                         'Time': [''] * 5,
+                                         'Distance': [''] * 5,
+                                         'Completed': completed})
                 workout_data = pd.concat([workout_data, new_data], ignore_index=True)
                 save_data(workout_data)
                 st.success(f'{exercise} data saved!')
+
     with tab_skipping:
         st.header('Skipping')
-        col1, col2, col3, col4, col5 = st.columns(5)
+        col1, col2, col3, col4, col5, col6 = st.columns(6)
         reps = []
+        completed = [False] * 5
         for i, col in enumerate([col1, col2, col3, col4, col5]):
             with col:
-                st.write(f'Set {i+1}')
+                completed[i] = st.checkbox('', key=f'skipping_completed_set{i+1}')
+                set_style = highlight_completed_sets(completed[i])
+                st.markdown(f'<div style="{set_style}">Set {i+1}</div>', unsafe_allow_html=True)
                 rep = st.number_input(f'Skipping Reps', min_value=0, step=10, key=f'skipping_reps_set{i+1}')
                 reps.append(rep)
+
+        with col6:
+            st.write('Completed')
+
         if st.button('Save Skipping'):
             new_data = pd.DataFrame({'Date': [datetime.now().strftime("%Y-%m-%d")] * 5,
                                      'Exercise': ['Skipping'] * 5,
@@ -143,23 +175,31 @@ def main():
                                      'Weight': [''] * 5,
                                      'Reps': reps,
                                      'Time': [''] * 5,
-                                     'Distance': [''] * 5})
+                                     'Distance': [''] * 5,
+                                     'Completed': completed})
             workout_data = pd.concat([workout_data, new_data], ignore_index=True)
             save_data(workout_data)
             st.success('Skipping data saved!')
 
     with tab_treadmill:
         st.header('Treadmill')
-        col1, col2, col3, col4, col5 = st.columns(5)
+        col1, col2, col3, col4, col5, col6 = st.columns(6)
         times = []
         distances = []
+        completed = [False] * 5
         for i, col in enumerate([col1, col2, col3, col4, col5]):
             with col:
-                st.write(f'Set {i+1}')
+                completed[i] = st.checkbox('', key=f'treadmill_completed_set{i+1}')
+                set_style = highlight_completed_sets(completed[i])
+                st.markdown(f'<div style="{set_style}">Set {i+1}</div>', unsafe_allow_html=True)
                 time_mins = st.number_input(f'Treadmill Time (minutes)', min_value=0, step=1, key=f'treadmill_time_set{i+1}')
                 distance_km = st.number_input(f'Treadmill Distance (km)', min_value=0.0, step=0.1, key=f'treadmill_distance_set{i+1}')
                 times.append(time_mins)
                 distances.append(distance_km)
+
+        with col6:
+            st.write('Completed')
+
         if st.button('Save Treadmill'):
             new_data = pd.DataFrame({'Date': [datetime.now().strftime("%Y-%m-%d")] * 5,
                                      'Exercise': ['Treadmill'] * 5,
@@ -167,20 +207,28 @@ def main():
                                      'Weight': [''] * 5,
                                      'Reps': [''] * 5,
                                      'Time': times,
-                                     'Distance': distances})
+                                     'Distance': distances,
+                                     'Completed': completed})
             workout_data = pd.concat([workout_data, new_data], ignore_index=True)
             save_data(workout_data)
             st.success('Treadmill data saved!')
 
     with tab_spinning:
         st.header('Spinning')
-        col1, col2, col3, col4, col5 = st.columns(5)
+        col1, col2, col3, col4, col5, col6 = st.columns(6)
         times = []
+        completed = [False] * 5
         for i, col in enumerate([col1, col2, col3, col4, col5]):
             with col:
-                st.write(f'Set {i+1}')
+                completed[i] = st.checkbox('', key=f'spinning_completed_set{i+1}')
+                set_style = highlight_completed_sets(completed[i])
+                st.markdown(f'<div style="{set_style}">Set {i+1}</div>', unsafe_allow_html=True)
                 time_mins = st.number_input(f'Spinning Time (minutes)', min_value=0, step=1, key=f'spinning_time_set{i+1}')
                 times.append(time_mins)
+
+        with col6:
+            st.write('Completed')
+
         if st.button('Save Spinning'):
             new_data = pd.DataFrame({'Date': [datetime.now().strftime("%Y-%m-%d")] * 5,
                                      'Exercise': ['Spinning'] * 5,
@@ -188,7 +236,8 @@ def main():
                                      'Weight': [''] * 5,
                                      'Reps': [''] * 5,
                                      'Time': times,
-                                     'Distance': [''] * 5})
+                                     'Distance': [''] * 5,
+                                     'Completed': completed})
             workout_data = pd.concat([workout_data, new_data], ignore_index=True)
             save_data(workout_data)
             st.success('Spinning data saved!')
