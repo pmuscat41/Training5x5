@@ -4,6 +4,7 @@ from datetime import datetime
 import time
 import pygame
 import os
+
 os.environ['SDL_AUDIODRIVER'] = 'dummy'
 pygame.mixer.init()
 st.set_page_config(layout="wide")
@@ -68,16 +69,6 @@ def main():
         timer_seconds = int(timer_duration.split(' ')[0]) if 'seconds' in timer_duration else int(timer_duration.split(' ')[0]) * 60
         timer_placeholder = st.sidebar.empty()
 
-        # Find the next uncompleted set and update the completed list
-        current_exercise = st.session_state.get('current_exercise')
-        if current_exercise:
-            completed = st.session_state.get(f"{current_exercise}_completed", [False] * 5)
-            next_uncompleted_set = find_next_uncompleted_set(completed)
-            if next_uncompleted_set is not None:
-                completed[next_uncompleted_set] = True
-                st.session_state[f"{current_exercise}_completed"] = completed
-                st.experimental_rerun()
-
         while timer_seconds > 0:
             minutes, seconds = divmod(timer_seconds, 60)
             timer_text = f"{minutes:02d}:{seconds:02d}"
@@ -90,11 +81,10 @@ def main():
 
         # Play sound when the timer ends
         if os.path.exists("/workspaces/Training5x5/timer_end.mp3"):
-             sound = pygame.mixer.Sound("/workspaces/Training5x5/timer_end.mp3")
-             sound.play()
+            sound = pygame.mixer.Sound("/workspaces/Training5x5/timer_end.mp3")
+            sound.play()
         else:
             st.warning("Sound file not found. Skipping sound effect.")
-    
 
     # Reporting
     st.sidebar.header('Workout Report')
@@ -119,8 +109,9 @@ def main():
     with tab_push:
         st.header('Push Day')
         exercises = ['Dumbbell Squats', 'Incline Dumbbell Press', 'Dumbbell Shoulder Press', 'Shoulder Supersets']
+        current_tab = 'push'
         for exercise in exercises:
-            st.session_state['current_exercise'] = exercise
+            st.session_state[f'{current_tab}_current_exercise'] = exercise
             st.subheader(exercise)
             last_weight, last_reps = get_last_weight_and_reps(workout_data, exercise)
             col1, col2, col3, col4, col5, col6 = st.columns(6)
@@ -152,12 +143,23 @@ def main():
                 workout_data = pd.concat([workout_data, new_data], ignore_index=True)
                 save_data(workout_data)
                 st.success(f'{exercise} data saved!')
+
+        # Find the next uncompleted set and update the completed list for the current tab
+        current_exercise = st.session_state.get(f'{current_tab}_current_exercise')
+        if current_exercise:
+            completed = st.session_state.get(f"{current_exercise}_completed", [False] * 5)
+            next_uncompleted_set = find_next_uncompleted_set(completed)
+            if next_uncompleted_set is not None:
+                completed[next_uncompleted_set] = True
+                st.session_state[f"{current_exercise}_completed"] = completed
+                st.experimental_rerun()
 
     with tab_pull:
         st.header('Pull Day')
         exercises = ['Deadlifts', 'Bent Over Rows', 'Bicep Curls']
+        current_tab = 'pull'
         for exercise in exercises:
-            st.session_state['current_exercise'] = exercise
+            st.session_state[f'{current_tab}_current_exercise'] = exercise
             st.subheader(exercise)
             last_weight, last_reps = get_last_weight_and_reps(workout_data, exercise)
             col1, col2, col3, col4, col5, col6 = st.columns(6)
@@ -189,6 +191,16 @@ def main():
                 workout_data = pd.concat([workout_data, new_data], ignore_index=True)
                 save_data(workout_data)
                 st.success(f'{exercise} data saved!')
+
+        # Find the next uncompleted set and update the completed list for the current tab
+        current_exercise = st.session_state.get(f'{current_tab}_current_exercise')
+        if current_exercise:
+            completed = st.session_state.get(f"{current_exercise}_completed", [False] * 5)
+            next_uncompleted_set = find_next_uncompleted_set(completed)
+            if next_uncompleted_set is not None:
+                completed[next_uncompleted_set] = True
+                st.session_state[f"{current_exercise}_completed"] = completed
+                st.experimental_rerun()
 
     with tab_skipping:
         st.header('Skipping')
