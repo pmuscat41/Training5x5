@@ -3,7 +3,9 @@ import pandas as pd
 from datetime import datetime
 import time
 import pygame
-
+import os
+os.environ['SDL_AUDIODRIVER'] = 'dummy'
+pygame.mixer.init()
 st.set_page_config(layout="wide")
 
 # Helper function to save workout data to CSV
@@ -52,7 +54,10 @@ def main():
     workout_data = load_data()
 
     # Initialize pygame mixer
-    pygame.mixer.init()
+    try:
+        pygame.mixer.init()
+    except pygame.error:
+        st.warning("Audio device not found. Sound effects will be disabled.")
 
     # Sidebar
     st.sidebar.title('Timer')
@@ -84,8 +89,12 @@ def main():
         st.sidebar.success("Workout complete!")
 
         # Play sound when the timer ends
-        sound = pygame.mixer.Sound("/workspaces/Training5x5/timer_end.mp3")
-        sound.play()
+        if os.path.exists("/workspaces/Training5x5/timer_end.mp3"):
+             sound = pygame.mixer.Sound("/workspaces/Training5x5/timer_end.mp3")
+             sound.play()
+        else:
+            st.warning("Sound file not found. Skipping sound effect.")
+    
 
     # Reporting
     st.sidebar.header('Workout Report')
