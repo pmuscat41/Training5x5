@@ -109,15 +109,19 @@ def main():
     with tab_push:
         st.header('Push Day')
         exercises = ['Dumbbell Squats', 'Incline Dumbbell Press', 'Dumbbell Shoulder Press', 'Shoulder Supersets']
-        current_tab = 'push'
+
+        # Reset the completed state when the tab is selected
+        if 'push_completed' not in st.session_state:
+            st.session_state['push_completed'] = {exercise: [False] * 5 for exercise in exercises}
+
         for exercise in exercises:
-            st.session_state[f'{current_tab}_current_exercise'] = exercise
+            st.session_state['current_exercise'] = exercise
             st.subheader(exercise)
             last_weight, last_reps = get_last_weight_and_reps(workout_data, exercise)
             col1, col2, col3, col4, col5, col6 = st.columns(6)
             weights = []
             reps = []
-            completed = st.session_state.get(f"{exercise}_completed", [False] * 5)
+            completed = st.session_state['push_completed'][exercise]
             for i, col in enumerate([col1, col2, col3, col4, col5]):
                 with col:
                     completed[i] = st.checkbox('', key=f'{exercise}_completed_set{i+1}', value=completed[i])
@@ -145,27 +149,31 @@ def main():
                 st.success(f'{exercise} data saved!')
 
         # Find the next uncompleted set and update the completed list for the current tab
-        current_exercise = st.session_state.get(f'{current_tab}_current_exercise')
+        current_exercise = st.session_state.get('current_exercise')
         if current_exercise:
-            completed = st.session_state.get(f"{current_exercise}_completed", [False] * 5)
+            completed = st.session_state['push_completed'][current_exercise]
             next_uncompleted_set = find_next_uncompleted_set(completed)
             if next_uncompleted_set is not None:
                 completed[next_uncompleted_set] = True
-                st.session_state[f"{current_exercise}_completed"] = completed
+                st.session_state['push_completed'][current_exercise] = completed
                 st.experimental_rerun()
 
     with tab_pull:
         st.header('Pull Day')
         exercises = ['Deadlifts', 'Bent Over Rows', 'Bicep Curls']
-        current_tab = 'pull'
+
+        # Reset the completed state when the tab is selected
+        if 'pull_completed' not in st.session_state:
+            st.session_state['pull_completed'] = {exercise: [False] * 5 for exercise in exercises}
+
         for exercise in exercises:
-            st.session_state[f'{current_tab}_current_exercise'] = exercise
+            st.session_state['current_exercise'] = exercise
             st.subheader(exercise)
             last_weight, last_reps = get_last_weight_and_reps(workout_data, exercise)
             col1, col2, col3, col4, col5, col6 = st.columns(6)
             weights = []
             reps = []
-            completed = st.session_state.get(f"{exercise}_completed", [False] * 5)
+            completed = st.session_state['pull_completed'][exercise]
             for i, col in enumerate([col1, col2, col3, col4, col5]):
                 with col:
                     completed[i] = st.checkbox('', key=f'{exercise}_completed_set{i+1}', value=completed[i])
@@ -193,20 +201,25 @@ def main():
                 st.success(f'{exercise} data saved!')
 
         # Find the next uncompleted set and update the completed list for the current tab
-        current_exercise = st.session_state.get(f'{current_tab}_current_exercise')
+        current_exercise = st.session_state.get('current_exercise')
         if current_exercise:
-            completed = st.session_state.get(f"{current_exercise}_completed", [False] * 5)
+            completed = st.session_state['pull_completed'][current_exercise]
             next_uncompleted_set = find_next_uncompleted_set(completed)
             if next_uncompleted_set is not None:
                 completed[next_uncompleted_set] = True
-                st.session_state[f"{current_exercise}_completed"] = completed
+                st.session_state['pull_completed'][current_exercise] = completed
                 st.experimental_rerun()
 
     with tab_skipping:
         st.header('Skipping')
         col1, col2, col3, col4, col5, col6 = st.columns(6)
         reps = []
-        completed = st.session_state.get("skipping_completed", [False] * 5)
+
+        # Reset the completed state when the tab is selected
+        if 'skipping_completed' not in st.session_state:
+            st.session_state['skipping_completed'] = [False] * 5
+
+        completed = st.session_state['skipping_completed']
         for i, col in enumerate([col1, col2, col3, col4, col5]):
             with col:
                 completed[i] = st.checkbox('', key=f'skipping_completed_set{i+1}', value=completed[i])
@@ -231,12 +244,24 @@ def main():
             save_data(workout_data)
             st.success('Skipping data saved!')
 
+        # Find the next uncompleted set and update the completed list for the current tab
+        next_uncompleted_set = find_next_uncompleted_set(completed)
+        if next_uncompleted_set is not None:
+            completed[next_uncompleted_set] = True
+            st.session_state['skipping_completed'] = completed
+            st.experimental_rerun()
+
     with tab_treadmill:
         st.header('Treadmill')
         col1, col2, col3, col4, col5, col6 = st.columns(6)
         times = []
         distances = []
-        completed = st.session_state.get("treadmill_completed", [False] * 5)
+
+        # Reset the completed state when the tab is selected
+        if 'treadmill_completed' not in st.session_state:
+            st.session_state['treadmill_completed'] = [False] * 5
+
+        completed = st.session_state['treadmill_completed']
         for i, col in enumerate([col1, col2, col3, col4, col5]):
             with col:
                 completed[i] = st.checkbox('', key=f'treadmill_completed_set{i+1}', value=completed[i])
@@ -263,18 +288,30 @@ def main():
             save_data(workout_data)
             st.success('Treadmill data saved!')
 
-    with tab_spinning:
-        st.header('Spinning')
-        col1, col2, col3, col4, col5, col6 = st.columns(6)
-        times = []
-        completed = st.session_state.get("spinning_completed", [False] * 5)
-        for i, col in enumerate([col1, col2, col3, col4, col5]):
-            with col:
-                completed[i] = st.checkbox('', key=f'spinning_completed_set{i+1}', value=completed[i])
-                set_style = highlight_completed_sets(completed[i])
-                st.markdown(f'<div style="{set_style}">Set {i+1}</div>', unsafe_allow_html=True)
-                time_mins = st.number_input(f'Spinning Time (minutes)', min_value=0, step=1, key=f'spinning_time_set{i+1}')
-                times.append(time_mins)
+        # Find the next uncompleted set and update the completed list for the current tab
+        next_uncompleted_set = find_next_uncompleted_set(completed)
+        if next_uncompleted_set is not None:
+            completed[next_uncompleted_set] = True
+            st.session_state['treadmill_completed'] = completed
+            st.experimental_rerun()
+
+        with tab_spinning:
+            st.header('Spinning')
+            col1, col2, col3, col4, col5, col6 = st.columns(6)
+            times = []
+
+            # Reset the completed state when the tab is selected
+            if 'spinning_completed' not in st.session_state:
+                st.session_state['spinning_completed'] = [False] * 5
+
+            completed = st.session_state['spinning_completed']
+            for i, col in enumerate([col1, col2, col3, col4, col5]):
+                with col:
+                    completed[i] = st.checkbox('', key=f'spinning_completed_set{i+1}', value=completed[i])
+                    set_style = highlight_completed_sets(completed[i])
+                    st.markdown(f'<div style="{set_style}">Set {i+1}</div>', unsafe_allow_html=True)
+                    time_mins = st.number_input(f'Spinning Time (minutes)', min_value=0, step=1, key=f'spinning_time_set{i+1}')
+                    times.append(time_mins)
 
         with col6:
             st.write('Completed')
@@ -291,6 +328,13 @@ def main():
             workout_data = pd.concat([workout_data, new_data], ignore_index=True)
             save_data(workout_data)
             st.success('Spinning data saved!')
+
+        # Find the next uncompleted set and update the completed list for the current tab
+        next_uncompleted_set = find_next_uncompleted_set(completed)
+        if next_uncompleted_set is not None:
+            completed[next_uncompleted_set] = True
+            st.session_state['spinning_completed'] = completed
+            st.experimental_rerun()
 
 if __name__ == '__main__':
     main()
